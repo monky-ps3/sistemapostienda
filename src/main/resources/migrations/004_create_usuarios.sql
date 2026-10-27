@@ -8,22 +8,16 @@
  */
 
 
+
 /*
  * ============================================================
- * TABLA: usuarios
+ * MIGRACION 004: USUARIOS Y ASIGNACION A SUCURSALES
+ * SistemaPOSTienda
  * ============================================================
  *
- * Contiene los usuarios que pueden acceder al sistema.
- *
- * Relación:
- *
- * usuarios
- *     │
- *     ├── rol_id ───────────► roles
- *     │
- *     └── usuario_sucursal ─► sucursales
- *
- * Un usuario puede pertenecer a una o varias sucursales.
+ * Esta migracion crea la estructura de usuarios.
+
+ * Compatible con negocios de diferentes giros comerciales.
  * ============================================================
  */
 
@@ -41,39 +35,47 @@ CREATE TABLE usuarios (
      */
     nombre VARCHAR(100) NOT NULL,
 
-    apellido_paterno VARCHAR(100),
+    apellido_paterno VARCHAR(100) NULL,
 
-    apellido_materno VARCHAR(100),
+    apellido_materno VARCHAR(100) NULL,
 
     /*
-     * Nombre utilizado para iniciar sesión.
+     * Nombre de acceso al sistema.
      */
     usuario VARCHAR(50) NOT NULL,
 
     /*
-     * Hash de la contraseña.
+     * Hash de la contrasena.
+     * Nunca almacenar contrasenas en texto plano.
      */
     password_hash VARCHAR(255) NOT NULL,
 
-    /** Datos de contacto.*/
-    correo VARCHAR(150),
-
-    telefono VARCHAR(20),
-
     /*
-     * Último acceso del usuario.
-     *
-     * NULL = nunca ha iniciado sesión.
+     * Datos de contacto.
      */
-    ultimo_acceso TIMESTAMP NULL,
+    correo VARCHAR(150) NULL,
+
+    telefono VARCHAR(20) NULL,
 
     /*
-     * Estado del usuario.
+     * Fecha y hora del ultimo acceso.
+     * NULL indica que nunca ha iniciado sesion.
+     */
+    ultimo_acceso TIMESTAMP NULL DEFAULT NULL,
+
+    /*
+     * Estado de la cuenta.
      */
     activo BOOLEAN NOT NULL DEFAULT TRUE,
 
     /*
-     * Auditoría.
+     * Obliga al cambio de contrasena en el siguiente acceso,
+     * cuando la aplicacion implemente este flujo.
+     */
+    requiere_cambio_password BOOLEAN NOT NULL DEFAULT FALSE,
+
+    /*
+     * Auditoria.
      */
     created_at TIMESTAMP NOT NULL
         DEFAULT CURRENT_TIMESTAMP,
@@ -83,29 +85,24 @@ CREATE TABLE usuarios (
         ON UPDATE CURRENT_TIMESTAMP,
 
     /*
-     * ========================================================
-     * LLAVE PRIMARIA
-     * ========================================================
+     * Llave primaria.
      */
     PRIMARY KEY (id),
 
     /*
-     * ========================================================
-     * RESTRICCIONES
-     * ========================================================
-     */
-    /*
-     * No puede existir otro usuario con
-     * el mismo nombre de acceso.
+     * El nombre de usuario debe ser unico.
      */
     CONSTRAINT uk_usuarios_usuario
         UNIQUE (usuario),
+
     /*
-     * Relación con roles.
+     * Relacion con el catalogo de roles.
      */
     CONSTRAINT fk_usuarios_rol
         FOREIGN KEY (rol_id)
         REFERENCES roles(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -114,32 +111,35 @@ COLLATE=utf8mb4_unicode_ci;
 
 /*
  * ============================================================
- * ÍNDICES
+ * INDICES DE USUARIOS
  * ============================================================
  */
 
 /*
- * Búsquedas por nombre.
+ * Busqueda por nombre.
  */
 CREATE INDEX idx_usuarios_nombre
 ON usuarios(nombre);
 
 
 /*
- * Búsquedas o filtros por rol.
+ * Filtros por rol.
+ * La restriccion UNIQUE de usuario ya crea un indice
+ * para las busquedas por nombre de acceso.
  */
 CREATE INDEX idx_usuarios_rol
 ON usuarios(rol_id);
 
 
 /*
- * Búsqueda de usuarios activos/inactivos.
+ * Filtros por estado de la cuenta.
  */
 CREATE INDEX idx_usuarios_activo
 ON usuarios(activo);
 
+
 /*
- * Consultas relacionadas con último acceso.
+ * Consultas por ultimo acceso.
  */
 CREATE INDEX idx_usuarios_ultimo_acceso
 ON usuarios(ultimo_acceso);
@@ -150,225 +150,80 @@ ON usuarios(ultimo_acceso);
  * TABLA: usuario_sucursal
  * ============================================================
  *
- * Tabla intermedia entre usuarios y sucursales.
+ * Relaciona los usuarios con las sucursales a las que
+ * tienen acceso.
  *
- * Permite:
+ * Un usuario puede pertenecer a una o varias sucursales.
+ * Una sucursal puede tener varios usuarios.
  *
- * Usuario 1 → Sucursal 1
+ * Esta estructura permite operar con una sola sucursal
+ * o con multiples sucursales.
  *
- * Usuario 2 → Sucursal 1
- * Usuario 2 → Sucursal 2
- *
- * Usuario 3 → Sucursal 1
- * Usuario 3 → Sucursal 2
- * Usuario 3 → Sucursal 3
- *
- * Esto permite que el sistema sea desde una sola
- * sucursal hasta múltiples sucursales.
+ * La autorizacion efectiva por sucursal tambien debe
+ * validarse desde la aplicacion Java.
  * ============================================================
  */
 
 CREATE TABLE usuario_sucursal (
-    /*
-     * Usuario relacionado.
-     */
+
     usuario_id BIGINT NOT NULL,
-    /*
-     * Sucursal relacionada.
-     */
+
     sucursal_id BIGINT NOT NULL,
+
     /*
-     * Evita duplicar la misma relación.
-     *
-     * Ejemplo:
-     *
-     * usuario 1 + sucursal 2
-     *
-     * solamente puede existir una vez.
+     * Una misma pareja usuario-sucursal solo puede
+     * registrarse una vez.
      */
     PRIMARY KEY (usuario_id, sucursal_id),
 
     /*
-     * Relación con usuarios.
-     *
-     * Si se elimina el usuario,
-     * se eliminan sus asignaciones.
+     * Relacion con usuarios.
+     * Si se elimina un usuario, se eliminan sus asignaciones.
      */
     CONSTRAINT fk_usuario_sucursal_usuario
         FOREIGN KEY (usuario_id)
         REFERENCES usuarios(id)
+        ON UPDATE RESTRICT
         ON DELETE CASCADE,
+
     /*
-     * Relación con sucursales.
-     *
-     * Si se elimina una sucursal,
-     * se eliminan sus asignaciones.
+     * Relacion con sucursales.
+     * Si se elimina una sucursal, se eliminan sus asignaciones.
      */
     CONSTRAINT fk_usuario_sucursal_sucursal
         FOREIGN KEY (sucursal_id)
         REFERENCES sucursales(id)
+        ON UPDATE RESTRICT
         ON DELETE CASCADE
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_unicode_ci;
 
+
 /*
  * ============================================================
- * ÍNDICE
+ * INDICE DE ASIGNACIONES
  * ============================================================
  *
- * Permite buscar rápidamente todos los usuarios
- * pertenecientes a una determinada sucursal.
+ * La llave primaria ya permite buscar por usuario_id.
+ * Este indice facilita obtener los usuarios de una sucursal.
+ * ============================================================
  */
+
 CREATE INDEX idx_usuario_sucursal_sucursal
 ON usuario_sucursal(sucursal_id);
-/*
- * ============================================================
- * DATOS INICIALES
- * ============================================================
- *
- * IMPORTANTE:
- * Estos usuarios son únicamente para pruebas.
- *
- * Los password_hash deben sustituirse por hashes reales
- * generados desde la aplicación.
- * ============================================================
- */
-
-
-/*
- * ADMINISTRADOR
- *
- * Su rol debe corresponder al ID real de Administrador.
- *
- * Aquí utilizamos rol_id = 1 como ejemplo.
- */
-INSERT INTO usuarios (
-    rol_id,
-    nombre,
-    apellido_paterno,
-    apellido_materno,
-    usuario,
-    password_hash,
-    correo,
-    telefono,
-    activo
-)
-VALUES (
-    1,
-    'Administrador',
-    'General',
-    NULL,
-    'admin',
-    'HASH_PENDIENTE',
-    'admin@empresa.com',
-    '9510000000',
-    TRUE
-);
-
-
-/*
- * GERENTE
- *
- * Ejemplo con rol_id = 2.
- */
-INSERT INTO usuarios (
-    rol_id,
-    nombre,
-    apellido_paterno,
-    apellido_materno,
-    usuario,
-    password_hash,
-    correo,
-    telefono,
-    activo
-)
-VALUES (
-    2,
-    'Juan',
-    'Hernández',
-    'López',
-    'juan.hernandez',
-    'HASH_PENDIENTE',
-    'juan@empresa.com',
-    '9510000001',
-    TRUE
-);
-
-
-/*
- * CAJERO
- *
- * Ejemplo con rol_id = 3.
- */
-INSERT INTO usuarios (
-    rol_id,
-    nombre,
-    apellido_paterno,
-    apellido_materno,
-    usuario,
-    password_hash,
-    correo,
-    telefono,
-    activo
-)
-VALUES (
-    3,
-    'María',
-    'García',
-    'Martínez',
-    'maria.garcia',
-    'HASH_PENDIENTE',
-    'maria@empresa.com',
-    '9510000002',
-    TRUE
-);
 
 
 /*
  * ============================================================
- * ASIGNACIÓN DE USUARIOS A SUCURSALES
+ * FIN DE LA MIGRACION
  * ============================================================
  *
- * Recordemos que tenemos:
+ * Los roles deben existir previamente en la migracion 002.
+ * Las sucursales deben existir previamente en la migracion 003.
  *
- * 1 = Matriz
- * 2 = Sucursal Centro
- * 3 = Sucursal Norte
- *
- * según nuestra migración de sucursales.
+ * La creacion del administrador inicial se implementara
+ * desde Java despues de crear la estructura de la base de datos.
+ * ============================================================
  */
-
-
-/*
- * Administrador:
- * acceso a todas las sucursales.
- */
-INSERT INTO usuario_sucursal
-(usuario_id, sucursal_id)
-VALUES
-(1, 1),
-(1, 2),
-(1, 3);
-
-
-/*
- * Gerente:
- * acceso a Matriz y Centro.
- */
-INSERT INTO usuario_sucursal
-(usuario_id, sucursal_id)
-VALUES
-(2, 1),
-(2, 2);
-
-
-/*
- * Cajero:
- * solamente Sucursal Centro.
- */
-INSERT INTO usuario_sucursal
-(usuario_id, sucursal_id)
-VALUES
-(3, 2);
