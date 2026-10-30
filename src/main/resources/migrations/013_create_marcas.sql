@@ -8,94 +8,84 @@
  */
 
 /*
-============================================================
-TABLA: marcas
-============================================================
-*/
+ * ============================================================
+ * MIGRACION 013: MARCAS
+ * SistemaPOSTienda
+ * ============================================================
+ *
+ * Catalogo general de marcas de productos.
+ *
+ * Las marcas se registran segun las necesidades del negocio.
+ * No se cargan marcas de un giro comercial especifico.
+ * ============================================================
+ */
 
 CREATE TABLE marcas (
 
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id BIGINT NOT NULL AUTO_INCREMENT,
 
     nombre VARCHAR(150) NOT NULL,
 
     codigo VARCHAR(30) NOT NULL,
 
-    descripcion VARCHAR(255),
+    descripcion VARCHAR(255) NULL,
 
     activo BOOLEAN NOT NULL DEFAULT TRUE,
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-               ON UPDATE CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
-    CONSTRAINT uk_marcas_nombre UNIQUE (nombre),
+    PRIMARY KEY (id),
 
-    CONSTRAINT uk_marcas_codigo UNIQUE (codigo)
+    /*
+     * No permitir nombres ni codigos duplicados.
+     */
+    CONSTRAINT uk_marca_nombre
+        UNIQUE (nombre),
 
-);
+    CONSTRAINT uk_marca_codigo
+        UNIQUE (codigo),
+
+    /*
+     * Validar que los datos principales no esten vacios.
+     */
+    CONSTRAINT chk_marca_nombre
+        CHECK (CHAR_LENGTH(TRIM(nombre)) > 0),
+
+    CONSTRAINT chk_marca_codigo
+        CHECK (CHAR_LENGTH(TRIM(codigo)) > 0)
+
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
 
 /*
-============================================================
-ÍNDICES
-============================================================
-*/
-
-CREATE INDEX idx_marcas_nombre
-ON marcas(nombre);
-
-CREATE INDEX idx_marcas_codigo
-ON marcas(codigo);
-
-CREATE INDEX idx_marcas_activo
-ON marcas(activo);
+ * ============================================================
+ * INDICES
+ * ============================================================
+ */
 
 /*
-============================================================
-DATOS INICIALES
-============================================================
-*/
+ * Consultar marcas activas.
+ */
+CREATE INDEX idx_marca_activo
+    ON marcas(activo);
 
-INSERT INTO marcas
-(nombre,codigo,descripcion,activo)
-VALUES
-('Coca-Cola','COC','Bebidas Coca-Cola',TRUE),
 
-('Pepsi','PEP','Bebidas Pepsi',TRUE),
-
-('Bimbo','BIM','Panificación y alimentos',TRUE),
-
-('Lala','LAL','Lácteos',TRUE),
-
-('Gamesa','GAM','Galletas',TRUE),
-
-('Sabritas','SAB','Botanas',TRUE),
-
-('Barcel','BAR','Botanas',TRUE),
-
-('Marinela','MAR','Pastelillos y pan dulce',TRUE),
-
-('Nestlé','NES','Alimentos y bebidas',TRUE),
-
-('Herdez','HER','Conservas y alimentos',TRUE),
-
-('La Costeña','COS','Conservas',TRUE),
-
-('Maseca','MAS','Harina de maíz',TRUE),
-
-('Great Value','GVA','Marca propia',TRUE),
-
-('Member''s Mark','MEM','Marca propia',TRUE),
-
-('Del Valle','DEL','Jugos y néctares',TRUE),
-
-('Jumex','JUM','Jugos',TRUE),
-
-('Danone','DAN','Lácteos',TRUE),
-
-('Santa Clara','SCL','Lácteos',TRUE),
-
-('Nescafé','NCA','Café soluble',TRUE),
-
-('Kellogg''s','KEL','Cereales',TRUE);
+/*
+ * ============================================================
+ * FIN DE LA MIGRACION
+ * ============================================================
+ *
+ * REGLAS:
+ *
+ * 1. No insertar marcas predeterminadas en esta migracion.
+ * 2. Cada negocio registra las marcas que comercializa.
+ * 3. Una marca utilizada por productos debe desactivarse
+ *    en lugar de eliminarse.
+ * 4. La aplicacion debe validar nombres y codigos duplicados.
+ * ============================================================
+ */
