@@ -7,15 +7,23 @@
  * Created: 2 jul 2026
  */
 
+
 /*
-============================================================
-TABLA: unidades_medida
-============================================================
-*/
+ * ============================================================
+ * MIGRACION 014: UNIDADES DE MEDIDA
+ * SistemaPOSTienda
+ * ============================================================
+ *
+ * Catalogo general de unidades utilizadas para comprar,
+ * vender y controlar productos.
+ *
+ * Compatible con diferentes giros comerciales.
+ * ============================================================
+ */
 
 CREATE TABLE unidades_medida (
 
-    id BIGINT AUTO_INCREMENT,
+    id BIGINT NOT NULL AUTO_INCREMENT,
 
     nombre VARCHAR(100) NOT NULL,
 
@@ -23,83 +31,189 @@ CREATE TABLE unidades_medida (
 
     abreviatura VARCHAR(20) NOT NULL,
 
-    descripcion VARCHAR(255),
+    /*
+     * Clasificacion de la unidad.
+     */
+    tipo ENUM(
+        'UNIDAD',
+        'PESO',
+        'VOLUMEN',
+        'LONGITUD',
+        'AREA',
+        'OTRO'
+    ) NOT NULL DEFAULT 'UNIDAD',
+
+    descripcion VARCHAR(255) NULL,
+
+    /*
+     * Indica si permite cantidades decimales.
+     *
+     * Ejemplos:
+     * KG: 0.500
+     * LT: 1.250
+     * M:  2.500
+     * PZA: normalmente cantidades enteras.
+     */
+    permite_decimales BOOLEAN NOT NULL DEFAULT FALSE,
 
     activo BOOLEAN NOT NULL DEFAULT TRUE,
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-               ON UPDATE CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
 
-    PRIMARY KEY(id),
+    PRIMARY KEY (id),
 
+    /*
+     * No permitir nombres, codigos ni abreviaturas duplicadas.
+     */
     CONSTRAINT uk_unidad_nombre
-        UNIQUE(nombre),
+        UNIQUE (nombre),
 
     CONSTRAINT uk_unidad_codigo
-        UNIQUE(codigo),
+        UNIQUE (codigo),
 
     CONSTRAINT uk_unidad_abreviatura
-        UNIQUE(abreviatura)
+        UNIQUE (abreviatura),
 
-);
+    /*
+     * Validaciones.
+     */
+    CONSTRAINT chk_unidad_nombre
+        CHECK (CHAR_LENGTH(TRIM(nombre)) > 0),
+
+    CONSTRAINT chk_unidad_codigo
+        CHECK (CHAR_LENGTH(TRIM(codigo)) > 0),
+
+    CONSTRAINT chk_unidad_abreviatura
+        CHECK (CHAR_LENGTH(TRIM(abreviatura)) > 0)
+
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+
 
 /*
-============================================================
-ÍNDICES
-============================================================
-*/
+ * ============================================================
+ * INDICE
+ * ============================================================
+ */
 
-CREATE INDEX idx_unidad_activo
-ON unidades_medida(activo);
+CREATE INDEX idx_unidad_activo_tipo
+    ON unidades_medida(activo, tipo);
+
 
 /*
-============================================================
-DATOS INICIALES
-============================================================
-*/
+ * ============================================================
+ * UNIDADES INICIALES
+ * ============================================================
+ *
+ * Se incluyen unidades generales que pueden utilizarse
+ * en distintos tipos de comercios.
+ *
+ * El negocio podra agregar otras unidades posteriormente.
+ * ============================================================
+ */
 
 INSERT INTO unidades_medida
-(nombre,codigo,abreviatura,descripcion,activo)
+(nombre, codigo, abreviatura, tipo, descripcion, permite_decimales)
 VALUES
 
-('Pieza','PZA','PZA','Venta por pieza',TRUE),
+/* CONTEO Y PRESENTACIONES */
 
-('Kilogramo','KG','KG','Unidad de peso',TRUE),
+('Pieza', 'PZA', 'PZA', 'UNIDAD',
+ 'Venta por pieza', FALSE),
 
-('Gramo','GR','GR','Unidad de peso',TRUE),
+('Caja', 'CAJ', 'CAJ', 'UNIDAD',
+ 'Venta por caja', FALSE),
 
-('Litro','LT','LT','Unidad de volumen',TRUE),
+('Paquete', 'PAQ', 'PAQ', 'UNIDAD',
+ 'Venta por paquete', FALSE),
 
-('Mililitro','ML','ML','Unidad de volumen',TRUE),
+('Bolsa', 'BOL', 'BOL', 'UNIDAD',
+ 'Venta por bolsa', FALSE),
 
-('Metro','M','M','Unidad de longitud',TRUE),
+('Botella', 'BOT', 'BOT', 'UNIDAD',
+ 'Venta por botella', FALSE),
 
-('Centímetro','CM','CM','Unidad de longitud',TRUE),
+('Lata', 'LAT', 'LAT', 'UNIDAD',
+ 'Venta por lata', FALSE),
 
-('Caja','CAJ','CAJ','Venta por caja',TRUE),
+('Rollo', 'ROL', 'ROL', 'UNIDAD',
+ 'Venta por rollo', FALSE),
 
-('Paquete','PAQ','PAQ','Venta por paquete',TRUE),
+('Sobre', 'SOB', 'SOB', 'UNIDAD',
+ 'Venta por sobre', FALSE),
 
-('Bolsa','BOL','BOL','Venta por bolsa',TRUE),
+('Costal', 'COS', 'COS', 'UNIDAD',
+ 'Venta por costal', FALSE),
 
-('Botella','BOT','BOT','Venta por botella',TRUE),
+('Bulto', 'BUL', 'BUL', 'UNIDAD',
+ 'Venta por bulto', FALSE),
 
-('Lata','LAT','LAT','Venta por lata',TRUE),
+('Docena', 'DOC', 'DOC', 'UNIDAD',
+ 'Venta por docena', FALSE),
 
-('Rollo','ROL','ROL','Venta por rollo',TRUE),
+('Par', 'PAR', 'PAR', 'UNIDAD',
+ 'Venta por par', FALSE),
 
-('Sobre','SOB','SOB','Venta por sobre',TRUE),
+('Cubeta', 'CUB', 'CUB', 'UNIDAD',
+ 'Venta por cubeta', FALSE),
 
-('Costal','COS','COS','Venta por costal',TRUE),
+/* PESO */
 
-('Bulto','BUL','BUL','Venta por bulto',TRUE),
+('Kilogramo', 'KG', 'KG', 'PESO',
+ 'Unidad de peso equivalente a mil gramos', TRUE),
 
-('Docena','DOC','DOC','Venta por docena',TRUE),
+('Gramo', 'GR', 'GR', 'PESO',
+ 'Unidad de peso', TRUE),
 
-('Par','PAR','PAR','Venta por par',TRUE),
+('Tonelada', 'TON', 'TON', 'PESO',
+ 'Unidad de peso equivalente a mil kilogramos', TRUE),
 
-('Galón','GAL','GAL','Unidad de volumen',TRUE),
+/* VOLUMEN */
 
-('Cubeta','CUB','CUB','Venta por cubeta',TRUE);
+('Litro', 'LT', 'LT', 'VOLUMEN',
+ 'Unidad de volumen', TRUE),
+
+('Mililitro', 'ML', 'ML', 'VOLUMEN',
+ 'Unidad de volumen', TRUE),
+
+('Galon', 'GAL', 'GAL', 'VOLUMEN',
+ 'Unidad de volumen', TRUE),
+
+/* LONGITUD */
+
+('Metro', 'M', 'M', 'LONGITUD',
+ 'Unidad de longitud', TRUE),
+
+('Centimetro', 'CM', 'CM', 'LONGITUD',
+ 'Unidad de longitud', TRUE),
+
+('Milimetro', 'MM', 'MM', 'LONGITUD',
+ 'Unidad de longitud', TRUE),
+
+/* AREA */
+
+('Metro cuadrado', 'M2', 'M2', 'AREA',
+ 'Unidad de superficie', TRUE);
+
+ /*
+  * ============================================================
+  * FIN DE LA MIGRACION
+  * ============================================================
+  *
+  * REGLAS PARA LA APLICACION JAVA:
+  *
+  * 1. Validar cantidades decimales segun la unidad y el producto.
+  * 2. No permitir vender cantidades decimales cuando la unidad
+  *    no las permita.
+  * 3. Las conversiones entre unidades deben respetar su tipo.
+  * 4. No convertir automaticamente caja, paquete o costal
+  *    a piezas: su contenido depende de cada producto.
+  * 5. Las unidades utilizadas por productos deben desactivarse
+  *    en lugar de eliminarse.
+  * 6. Permitir registrar nuevas unidades desde el catalogo.
+  * ============================================================
+  */
