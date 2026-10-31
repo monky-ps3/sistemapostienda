@@ -7,216 +7,187 @@
  * Created: 2 jul 2026
  */
 /*
-============================================================
-TABLA: productos
-============================================================
 
-Catálogo principal de productos del sistema.
-
-Relaciones:
-    categorias
-    marcas
-    unidades_medida
-
-El inventario actual NO se almacena aquí.
-Posteriormente será manejado por la tabla:
-    inventarios
-
-============================================================
-*/
+/*
+ * ============================================================
+ * MIGRACION 015: PRODUCTOS
+ * SistemaPOSTienda
+ * ============================================================
+ *
+ * Catalogo principal de productos.
+ *
+ * El inventario actual se controla en la tabla inventarios.
+ * Los precios se administran mediante presentaciones y listas.
+ * Los codigos de barras se registran por presentacion.
+ * ============================================================
+ */
 
 CREATE TABLE productos (
 
-    /*
-     * Identificador único del producto.
-     */
     id BIGINT NOT NULL AUTO_INCREMENT,
 
     /*
-     * Categoría a la que pertenece el producto.
+     * Clasificacion del producto.
      */
     categoria_id BIGINT NOT NULL,
 
     /*
-     * Marca del producto.
-     *
-     * Es opcional porque puede haber productos
-     * sin una marca específica.
+     * La marca es opcional.
      */
-    marca_id BIGINT,
+    marca_id BIGINT NULL,
 
     /*
-     * Unidad utilizada para comprar, vender
-     * y controlar el producto.
+     * Unidad base para controlar el producto.
      */
     unidad_medida_id BIGINT NOT NULL,
 
     /*
-     * Código principal del producto.
-     *
-     * Puede utilizarse con el lector de códigos
-     * de barras.
+     * Codigo interno unico del producto.
+     * Los codigos de barras se manejaran en otra tabla.
      */
     codigo VARCHAR(50) NOT NULL,
 
     /*
-     * Código interno utilizado para identificar
-     * el producto dentro del negocio.
+     * SKU opcional para control interno.
      */
-    sku VARCHAR(100),
+    sku VARCHAR(100) NULL,
 
-    /*
-     * Nombre del producto.
-     */
     nombre VARCHAR(200) NOT NULL,
 
-    /*
-     * Descripción adicional.
-     */
-    descripcion TEXT,
+    descripcion TEXT NULL,
+
+    imagen VARCHAR(255) NULL,
 
     /*
-     * Ruta o nombre de la imagen del producto.
-     */
-    imagen VARCHAR(255),
-
-    /*
-     * Indica si el producto causa IVA.
+     * Configuracion de IVA.
+     *
+     * Si aplica_iva es FALSE, porcentaje_iva debe ser 0.
+     * Si aplica_iva es TRUE, puede manejar tasas de 0 a 100.
+     *
+     * La tasa aplicable debe configurarse segun el producto
+     * y las disposiciones fiscales correspondientes.
      */
     aplica_iva BOOLEAN NOT NULL DEFAULT TRUE,
 
-    /*
-     * Porcentaje de IVA específico del producto.
-     *
-     * Por defecto utiliza 16%.
-     */
     porcentaje_iva DECIMAL(5,2) NOT NULL DEFAULT 16.00,
 
     /*
-     * Indica si el producto participa
-     * en el control de inventario.
+     * Control de inventario.
      */
     maneja_inventario BOOLEAN NOT NULL DEFAULT TRUE,
 
     /*
-     * Indica si el producto utiliza lotes.
+     * Control de lotes y caducidad.
      */
     maneja_lotes BOOLEAN NOT NULL DEFAULT FALSE,
 
-    /*
-     * Indica si el producto controla
-     * fechas de caducidad.
-     */
     maneja_caducidad BOOLEAN NOT NULL DEFAULT FALSE,
 
     /*
-     * Indica si el producto se vende por peso.
-     *
-     * Ejemplo:
-     * azúcar, arroz, frutas, etc.
+     * Venta por peso o cantidades fraccionarias.
      */
     venta_por_peso BOOLEAN NOT NULL DEFAULT FALSE,
 
-    /*
-     * Indica si permite cantidades decimales.
-     *
-     * Ejemplo:
-     * 0.500 kg
-     * 1.250 kg
-     * 2.350 metros
-     */
     permite_decimales BOOLEAN NOT NULL DEFAULT FALSE,
 
     /*
-     * Cantidad mínima recomendada de inventario.
-     *
-     * El stock actual se manejará posteriormente
-     * en la tabla inventarios.
+     * Existencias minimas y maximas recomendadas.
+     * El stock actual se controla en inventarios.
      */
     stock_minimo DECIMAL(12,3) NOT NULL DEFAULT 0,
 
-    /*
-     * Cantidad máxima recomendada de inventario.
-     */
-    stock_maximo DECIMAL(12,3),
+    stock_maximo DECIMAL(12,3) NULL,
 
     /*
-     * Indica si se pueden aplicar descuentos
-     * directamente al producto.
+     * Permitir descuentos sobre el producto.
      */
     permite_descuento BOOLEAN NOT NULL DEFAULT TRUE,
 
-    /*
-     * Estado del producto.
-     */
     activo BOOLEAN NOT NULL DEFAULT TRUE,
 
-    /*
-     * Fecha de creación.
-     */
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    /*
-     * Fecha de última actualización.
-     */
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
 
-
-    /*
-    ========================================================
-    LLAVE PRIMARIA
-    ========================================================
-    */
-
     PRIMARY KEY (id),
 
-
     /*
-    ========================================================
-    RESTRICCIONES UNIQUE
-    ========================================================
-    */
-
-    /*
-     * No permite dos productos con el mismo código.
+     * Codigos unicos.
      */
     CONSTRAINT uk_producto_codigo
         UNIQUE (codigo),
 
-    /*
-     * No permite dos productos con el mismo SKU.
-     */
     CONSTRAINT uk_producto_sku
         UNIQUE (sku),
 
+    /*
+     * Validaciones de datos.
+     */
+    CONSTRAINT chk_producto_codigo
+        CHECK (CHAR_LENGTH(TRIM(codigo)) > 0),
+
+    CONSTRAINT chk_producto_nombre
+        CHECK (CHAR_LENGTH(TRIM(nombre)) > 0),
+
+    CONSTRAINT chk_producto_iva
+        CHECK (
+            porcentaje_iva >= 0
+            AND porcentaje_iva <= 100
+            AND (
+                aplica_iva = TRUE
+                OR porcentaje_iva = 0
+            )
+        ),
+
+    CONSTRAINT chk_producto_stock_minimo
+        CHECK (stock_minimo >= 0),
+
+    CONSTRAINT chk_producto_stock_maximo
+        CHECK (
+            stock_maximo IS NULL
+            OR stock_maximo >= stock_minimo
+        ),
 
     /*
-    ========================================================
-    LLAVES FORÁNEAS
-    ========================================================
-    */
+     * Un producto vendido por peso debe aceptar decimales.
+     */
+    CONSTRAINT chk_producto_peso_decimales
+        CHECK (
+            venta_por_peso = FALSE
+            OR permite_decimales = TRUE
+        ),
 
     /*
-     * Relación con categorías.
+     * Para controlar caducidad se requiere control por lotes.
+     */
+    CONSTRAINT chk_producto_caducidad_lotes
+        CHECK (
+            maneja_caducidad = FALSE
+            OR maneja_lotes = TRUE
+        ),
+
+    /*
+     * Relaciones.
+     * No eliminar catalogos que tengan productos relacionados.
      */
     CONSTRAINT fk_producto_categoria
         FOREIGN KEY (categoria_id)
-        REFERENCES categorias(id),
+        REFERENCES categorias(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
 
-    /*
-     * Relación con marcas.
-     */
     CONSTRAINT fk_producto_marca
         FOREIGN KEY (marca_id)
-        REFERENCES marcas(id),
+        REFERENCES marcas(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
 
-    /*
-     * Relación con unidades de medida.
-     */
     CONSTRAINT fk_producto_unidad
         FOREIGN KEY (unidad_medida_id)
         REFERENCES unidades_medida(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -224,36 +195,62 @@ COLLATE=utf8mb4_unicode_ci;
 
 
 /*
-============================================================
-ÍNDICES
-============================================================
-*/
+ * ============================================================
+ * INDICES
+ * ============================================================
+ */
 
 /*
- * Facilita las búsquedas por nombre.
+ * Busqueda por nombre.
  */
 CREATE INDEX idx_producto_nombre
-ON productos(nombre);
+    ON productos(nombre);
 
 
 /*
- * Facilita búsquedas y consultas
- * por categoría.
+ * Productos por categoria y estado.
  */
-CREATE INDEX idx_producto_categoria
-ON productos(categoria_id);
+CREATE INDEX idx_producto_categoria_activo
+    ON productos(categoria_id, activo);
 
 
 /*
- * Facilita búsquedas y consultas
- * por marca.
+ * Productos por marca.
  */
 CREATE INDEX idx_producto_marca
-ON productos(marca_id);
+    ON productos(marca_id);
 
 
 /*
- * Facilita consultas de productos activos.
+ * Productos por unidad de medida.
+ */
+CREATE INDEX idx_producto_unidad
+    ON productos(unidad_medida_id);
+
+
+/*
+ * Consulta de productos activos.
  */
 CREATE INDEX idx_producto_activo
-ON productos(activo);
+    ON productos(activo);
+
+
+/*
+ * ============================================================
+ * FIN DE LA MIGRACION
+ * ============================================================
+ *
+ * REGLAS PARA LA APLICACION JAVA:
+ *
+ * 1. No eliminar productos que tengan movimientos o ventas.
+ *    Utilizar el estado activo/inactivo.
+ * 2. Los codigos de barras se administran por presentacion.
+ * 3. Validar que la unidad permita la cantidad capturada.
+ * 4. Los productos por peso deben aceptar cantidades decimales.
+ * 5. La caducidad requiere control por lotes.
+ * 6. El stock actual se obtiene de inventarios.
+ * 7. El porcentaje de IVA debe configurarse correctamente.
+ * 8. Las operaciones de inventario deben quedar registradas
+ *    en el kardex.
+ * ============================================================
+ */
