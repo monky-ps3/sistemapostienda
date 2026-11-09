@@ -9,27 +9,17 @@
 
 /*
  * ============================================================
- * TABLA: listas_precios
+ * MIGRACIÓN 017: LISTAS DE PRECIOS
  * ============================================================
  *
- * Define los diferentes tipos de precio que puede manejar
- * el sistema.
+ * Permite manejar diferentes listas de precios:
+ * - Público general
+ * - Mayoreo
+ * - Distribuidor
+ * - Clientes especiales
  *
- * Ejemplos:
- *
- * PUBLICO
- * MAYOREO
- * DISTRIBUIDOR
- * VIP
- * EMPLEADO
- *
- * Una lista puede tener:
- *
- * GLOBAL:
- *   Se utiliza en todas las sucursales.
- *
- * SUCURSAL:
- *   Se utiliza únicamente en una sucursal determinada.
+ * Las listas pueden ser globales o pertenecer
+ * a una sucursal específica.
  *
  * ============================================================
  */
@@ -38,64 +28,50 @@ CREATE TABLE listas_precios (
 
     id BIGINT NOT NULL AUTO_INCREMENT,
 
-    /*
-     * Código interno de la lista.
-     *
-     * Ejemplo:
-     * PUBLICO
-     * MAYOREO
-     * CENTRO
-     * NORTE
-     */
     codigo VARCHAR(20) NOT NULL,
 
-    /*
-     * Nombre visible de la lista.
-     */
     nombre VARCHAR(100) NOT NULL,
 
-    /*
-     * Descripción de la lista.
-     */
-    descripcion VARCHAR(255),
+    descripcion VARCHAR(255) NULL,
 
-    /*
-     * Prioridad de la lista.
-     *
-     * Un número menor representa mayor prioridad.
-     */
     prioridad INT NOT NULL DEFAULT 1,
 
-    /*
-     * Indica si esta es la lista predeterminada
-     * para las ventas.
-     */
     es_predeterminada BOOLEAN NOT NULL DEFAULT FALSE,
 
-    /*
-     * Define el alcance de la lista.
-     *
-     * GLOBAL    = disponible para todas las sucursales.
-     * SUCURSAL  = pertenece a una sucursal específica.
-     */
-    alcance VARCHAR(20) NOT NULL DEFAULT 'GLOBAL',
+    alcance ENUM('GLOBAL', 'SUCURSAL')
+        NOT NULL DEFAULT 'GLOBAL',
 
-    /*
-     * Sucursal propietaria de la lista cuando
-     * el alcance es SUCURSAL.
-     *
-     * Para una lista GLOBAL debe ser NULL.
-     */
     sucursal_id BIGINT NULL,
 
-    /*
-     * Estado de la lista.
-     */
     activa BOOLEAN NOT NULL DEFAULT TRUE,
 
     /*
-     * Auditoría.
+     * Solo puede existir una lista predeterminada global.
      */
+    lista_predeterminada_global TINYINT
+        GENERATED ALWAYS AS (
+            CASE
+                WHEN es_predeterminada = TRUE
+                 AND alcance = 'GLOBAL'
+                THEN 1
+                ELSE NULL
+            END
+        ) STORED,
+
+    /*
+     * Solo puede existir una lista predeterminada
+     * por cada sucursal.
+     */
+    lista_predeterminada_sucursal BIGINT
+        GENERATED ALWAYS AS (
+            CASE
+                WHEN es_predeterminada = TRUE
+                 AND alcance = 'SUCURSAL'
+                THEN sucursal_id
+                ELSE NULL
+            END
+        ) STORED,
+
     created_at TIMESTAMP NOT NULL
         DEFAULT CURRENT_TIMESTAMP,
 
@@ -103,38 +79,47 @@ CREATE TABLE listas_precios (
         DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
 
-    /*
-     * ========================================================
-     * LLAVE PRIMARIA
-     * ========================================================
-     */
     PRIMARY KEY (id),
 
-    /*
-     * Código único.
-     */
     CONSTRAINT uk_lista_precio_codigo
         UNIQUE (codigo),
 
-    /*
-     * Nombre único.
-     */
     CONSTRAINT uk_lista_precio_nombre
         UNIQUE (nombre),
 
-    /*
-     * Relación con sucursales.
-     */
+    CONSTRAINT uk_lista_predeterminada_global
+        UNIQUE (lista_predeterminada_global),
+
+    CONSTRAINT uk_lista_predeterminada_sucursal
+        UNIQUE (lista_predeterminada_sucursal),
+
     CONSTRAINT fk_lista_precio_sucursal
         FOREIGN KEY (sucursal_id)
         REFERENCES sucursales(id)
+        ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
-    /*
-     * Solo permitimos los dos tipos de alcance.
-     */
-    CONSTRAINT chk_lista_precio_alcance
-        CHECK (alcance IN ('GLOBAL', 'SUCURSAL'))
+    CONSTRAINT chk_lista_precio_codigo
+        CHECK (CHAR_LENGTH(TRIM(codigo)) > 0),
+
+    CONSTRAINT chk_lista_precio_nombre
+        CHECK (CHAR_LENGTH(TRIM(nombre)) > 0),
+
+    CONSTRAINT chk_lista_precio_prioridad
+        CHECK (prioridad > 0),
+
+    CONSTRAINT chk_lista_precio_sucursal
+        CHECK (
+            (alcance = 'GLOBAL' AND sucursal_id IS NULL)
+            OR
+            (alcance = 'SUCURSAL' AND sucursal_id IS NOT NULL)
+        ),
+
+    CONSTRAINT chk_lista_predeterminada_activa
+        CHECK (
+            es_predeterminada = FALSE
+            OR activa = TRUE
+        )
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -147,42 +132,32 @@ COLLATE=utf8mb4_unicode_ci;
  * ============================================================
  */
 
-/*
- * Buscar listas activas.
- */
 CREATE INDEX idx_lista_precio_activa
 ON listas_precios(activa);
 
-
-/*
- * Ordenar o buscar por prioridad.
- */
 CREATE INDEX idx_lista_precio_prioridad
 ON listas_precios(prioridad);
 
+CREATE INDEX idx_lista_precio_sucursal_activa
+ON listas_precios(sucursal_id, activa, prioridad);
 
-/*
- * Buscar listas de una sucursal.
- */
-CREATE INDEX idx_lista_precio_sucursal
-ON listas_precios(sucursal_id);
-
-
-/*
- * Buscar listas por tipo de alcance.
- */
-CREATE INDEX idx_lista_precio_alcance
-ON listas_precios(alcance);
+CREATE INDEX idx_lista_precio_alcance_activa
+ON listas_precios(alcance, activa);
 
 
 /*
  * ============================================================
- * LISTAS GLOBALES
+ * LISTA INICIAL
+ * ============================================================
+ *
+ * Se crea únicamente la lista de público general.
+ * Las demás listas se podrán crear desde el sistema
+ * según las necesidades de cada negocio.
+ *
  * ============================================================
  */
 
-INSERT INTO listas_precios
-(
+INSERT INTO listas_precios (
     codigo,
     nombre,
     descripcion,
@@ -192,53 +167,12 @@ INSERT INTO listas_precios
     sucursal_id,
     activa
 )
-VALUES
-(
+VALUES (
     'PUBLICO',
     'Público General',
-    'Precio normal de venta al público',
+    'Lista de precios general para ventas al público',
     1,
     TRUE,
-    'GLOBAL',
-    NULL,
-    TRUE
-),
-(
-    'MAYOREO',
-    'Mayoreo',
-    'Precio para compras por volumen',
-    2,
-    FALSE,
-    'GLOBAL',
-    NULL,
-    TRUE
-),
-(
-    'DISTRIBUIDOR',
-    'Distribuidor',
-    'Precio especial para distribuidores',
-    3,
-    FALSE,
-    'GLOBAL',
-    NULL,
-    TRUE
-),
-(
-    'VIP',
-    'Cliente Frecuente',
-    'Precio especial para clientes frecuentes',
-    4,
-    FALSE,
-    'GLOBAL',
-    NULL,
-    TRUE
-),
-(
-    'EMPLEADO',
-    'Empleado',
-    'Precio especial para empleados',
-    5,
-    FALSE,
     'GLOBAL',
     NULL,
     TRUE
