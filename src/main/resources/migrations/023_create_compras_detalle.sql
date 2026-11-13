@@ -77,9 +77,9 @@ CREATE TABLE compras_detalle (
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
-    CONSTRAINT fk_compra_detalle_presentacion
-        FOREIGN KEY (presentacion_id)
-        REFERENCES presentaciones(id)
+    CONSTRAINT fk_compra_detalle_presentacion_producto
+        FOREIGN KEY (presentacion_id, producto_id)
+        REFERENCES presentaciones(id, producto_id)
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
