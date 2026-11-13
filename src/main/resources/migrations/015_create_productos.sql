@@ -7,8 +7,6 @@
  * Created: 2 jul 2026
  */
 /*
-
-/*
  * ============================================================
  * MIGRACION 015: PRODUCTOS
  * SistemaPOSTienda
