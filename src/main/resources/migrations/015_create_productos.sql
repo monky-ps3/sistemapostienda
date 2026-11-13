@@ -14,7 +14,7 @@
  *
  * Catalogo principal de productos.
  *
- * El inventario actual se controla en la tabla inventarios.
+ * El inventario actual se controla en la tabla inventario.
  * Los precios se administran mediante presentaciones y listas.
  * Los codigos de barras se registran por presentacion.
  * ============================================================
