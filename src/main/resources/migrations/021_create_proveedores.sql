@@ -6,100 +6,66 @@
  * Author:  monky
  * Created: 2 jul 2026
  */
+
+/*
+ * ============================================================
+ * MIGRACIÓN 021: PROVEEDORES
+ * ============================================================
+ *
+ * Registro general de proveedores.
+ *
+ * Compatible con diferentes tipos de negocios:
+ * - Abarrotes
+ * - Farmacias
+ * - Ferreterías
+ * - Electrónica
+ * - Refaccionarias
+ * - Otros comercios
+ *
+ * Incluye información fiscal, comercial
+ * y condiciones de crédito.
+ *
+ * ============================================================
+ */
+
 CREATE TABLE proveedores (
 
     id BIGINT NOT NULL AUTO_INCREMENT,
 
-    /*
-     * Código interno del proveedor.
-     * Ejemplo:
-     * PROV000001
-     */
     codigo VARCHAR(30) NOT NULL,
 
-    /*
-     * Nombre comercial o nombre del proveedor.
-     */
     nombre VARCHAR(200) NOT NULL,
 
-    /*
-     * Razón social.
-     */
-    razon_social VARCHAR(255),
+    razon_social VARCHAR(255) NULL,
 
-    /*
-     * RFC del proveedor.
-     */
-    rfc VARCHAR(20),
+    rfc VARCHAR(20) NULL,
 
-    /*
-     * Persona de contacto.
-     */
-    contacto VARCHAR(150),
+    contacto VARCHAR(150) NULL,
 
-    /*
-     * Teléfono.
-     */
-    telefono VARCHAR(30),
+    telefono VARCHAR(30) NULL,
 
-    /*
-     * Celular.
-     */
-    celular VARCHAR(30),
+    celular VARCHAR(30) NULL,
 
-    /*
-     * Correo electrónico.
-     */
-    email VARCHAR(150),
+    email VARCHAR(150) NULL,
 
-    /*
-     * Dirección.
-     */
-    direccion VARCHAR(255),
+    direccion VARCHAR(255) NULL,
 
-    ciudad VARCHAR(100),
+    ciudad VARCHAR(100) NULL,
 
-    estado VARCHAR(100),
+    estado VARCHAR(100) NULL,
 
-    codigo_postal VARCHAR(10),
+    codigo_postal VARCHAR(10) NULL,
 
-    /*
-     * Días de crédito otorgados
-     * por el proveedor.
-     *
-     * Ejemplo:
-     * 0  = contado
-     * 7  = 7 días
-     * 15 = 15 días
-     * 30 = 30 días
-     */
     dias_credito INT NOT NULL DEFAULT 0,
 
-    /*
-     * Límite de crédito que el proveedor
-     * nos permite manejar.
-     */
     limite_credito DECIMAL(12,2) NOT NULL DEFAULT 0,
 
-    /*
-     * Indica si podemos realizar compras
-     * a crédito con este proveedor.
-     */
     permite_credito BOOLEAN NOT NULL DEFAULT FALSE,
 
-    /*
-     * Observaciones adicionales.
-     */
-    observaciones TEXT,
+    observaciones TEXT NULL,
 
-    /*
-     * Estado del proveedor.
-     */
     activo BOOLEAN NOT NULL DEFAULT TRUE,
 
-    /*
-     * Auditoría.
-     */
     created_at TIMESTAMP NOT NULL
         DEFAULT CURRENT_TIMESTAMP,
 
@@ -109,33 +75,68 @@ CREATE TABLE proveedores (
 
     PRIMARY KEY (id),
 
-    /*
-     * Código único.
-     */
     CONSTRAINT uk_proveedor_codigo
         UNIQUE (codigo),
 
     /*
-     * RFC único.
-     *
-     * MySQL permite múltiples NULL,
-     * por lo que proveedores sin RFC
-     * no tendrán problema.
+     * Se permiten varios proveedores sin RFC.
+     * Los RFC registrados no pueden repetirse.
      */
     CONSTRAINT uk_proveedor_rfc
-        UNIQUE (rfc)
+        UNIQUE (rfc),
+
+    CONSTRAINT chk_proveedor_codigo
+        CHECK (CHAR_LENGTH(TRIM(codigo)) > 0),
+
+    CONSTRAINT chk_proveedor_nombre
+        CHECK (CHAR_LENGTH(TRIM(nombre)) > 0),
+
+    CONSTRAINT chk_proveedor_dias_credito
+        CHECK (dias_credito >= 0),
+
+    CONSTRAINT chk_proveedor_limite_credito
+        CHECK (limite_credito >= 0),
+
+    /*
+     * Si no se permite crédito, no deben existir
+     * condiciones de crédito configuradas.
+     */
+    CONSTRAINT chk_proveedor_condiciones_credito
+        CHECK (
+            permite_credito = TRUE
+            OR (
+                limite_credito = 0
+                AND dias_credito = 0
+            )
+        )
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_unicode_ci;
 
 
--- ============================================================
--- ÍNDICES
--- ============================================================
+/*
+ * ============================================================
+ * ÍNDICES
+ * ============================================================
+ */
 
+/*
+ * Búsqueda por nombre.
+ */
 CREATE INDEX idx_proveedor_nombre
 ON proveedores(nombre);
 
-CREATE INDEX idx_proveedor_activo
-ON proveedores(activo);
+
+/*
+ * Consultar proveedores activos.
+ */
+CREATE INDEX idx_proveedor_activo_nombre
+ON proveedores(activo, nombre);
+
+
+/*
+ * Búsqueda por RFC.
+ */
+CREATE INDEX idx_proveedor_rfc
+ON proveedores(rfc);
