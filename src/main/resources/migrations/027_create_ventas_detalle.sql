@@ -27,6 +27,10 @@ CREATE TABLE ventas_detalle (
 
     venta_id BIGINT NOT NULL,
 
+    /* Sucursal heredada de la venta para validar que el
+       inventario descontado pertenezca a esa misma sucursal. */
+    sucursal_id BIGINT NOT NULL,
+
     producto_id BIGINT NOT NULL,
 
     presentacion_id BIGINT NOT NULL,
@@ -80,9 +84,9 @@ CREATE TABLE ventas_detalle (
      * No eliminar detalles que formen parte
      * del historial de una venta.
      */
-    CONSTRAINT fk_venta_detalle_venta
-        FOREIGN KEY (venta_id)
-        REFERENCES ventas(id)
+    CONSTRAINT fk_venta_detalle_venta_sucursal
+        FOREIGN KEY (venta_id, sucursal_id)
+        REFERENCES ventas(id, sucursal_id)
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
@@ -98,9 +102,9 @@ CREATE TABLE ventas_detalle (
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
-    CONSTRAINT fk_venta_detalle_inventario_producto
-        FOREIGN KEY (inventario_id, producto_id)
-        REFERENCES inventario(id, producto_id)
+    CONSTRAINT fk_venta_detalle_inventario_sucursal_producto
+        FOREIGN KEY (inventario_id, sucursal_id, producto_id)
+        REFERENCES inventario(id, sucursal_id, producto_id)
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
