@@ -14,10 +14,14 @@
  * SistemaPOSTienda
  * ============================================================
  *
- * Clasificacion general de productos.
+ * Catalogo general de categorias y subcategorias.
  *
- * Las categorias iniciales se configuraran segun el giro
- * comercial seleccionado al instalar el sistema.
+ * Compatible con diferentes giros comerciales:
+ * abarrotes, farmacia, ferreteria, electronica,
+ * refaccionaria, ropa, entre otros.
+ *
+ * Las categorias iniciales se configuraran durante
+ * la instalacion del sistema.
  * ============================================================
  */
 
@@ -25,9 +29,11 @@ CREATE TABLE categorias (
 
     id BIGINT NOT NULL AUTO_INCREMENT,
 
+    categoria_padre_id BIGINT NULL,
+
     nombre VARCHAR(100) NOT NULL,
 
-    codigo VARCHAR(20) NOT NULL,
+    codigo VARCHAR(30) NOT NULL,
 
     descripcion VARCHAR(255) NULL,
 
@@ -47,7 +53,7 @@ CREATE TABLE categorias (
     PRIMARY KEY (id),
 
     /*
-     * No repetir nombres ni codigos de categoria.
+     * Evitar nombres y codigos duplicados.
      */
     CONSTRAINT uk_categoria_nombre
         UNIQUE (nombre),
@@ -56,7 +62,16 @@ CREATE TABLE categorias (
         UNIQUE (codigo),
 
     /*
-     * Validaciones de datos.
+     * Relacion de categoria principal y subcategoria.
+     */
+    CONSTRAINT fk_categoria_padre
+        FOREIGN KEY (categoria_padre_id)
+        REFERENCES categorias(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
+
+    /*
+     * Validaciones.
      */
     CONSTRAINT chk_categoria_nombre
         CHECK (CHAR_LENGTH(TRIM(nombre)) > 0),
@@ -65,7 +80,13 @@ CREATE TABLE categorias (
         CHECK (CHAR_LENGTH(TRIM(codigo)) > 0),
 
     CONSTRAINT chk_categoria_orden
-        CHECK (orden >= 0)
+        CHECK (orden >= 0),
+
+    CONSTRAINT chk_categoria_padre
+        CHECK (
+            categoria_padre_id IS NULL
+            OR categoria_padre_id <> id
+        )
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -79,6 +100,13 @@ COLLATE=utf8mb4_unicode_ci;
  */
 
 /*
+ * Consultar categorias por categoria principal.
+ */
+CREATE INDEX idx_categoria_padre
+    ON categorias(categoria_padre_id);
+
+
+/*
  * Consultar categorias activas.
  */
 CREATE INDEX idx_categoria_activo
@@ -86,25 +114,48 @@ CREATE INDEX idx_categoria_activo
 
 
 /*
- * Ordenar categorias en catalogos y formularios.
+ * Consultar categorias por estado y orden.
  */
-CREATE INDEX idx_categoria_orden
-    ON categorias(orden);
+CREATE INDEX idx_categoria_activo_orden
+    ON categorias(activo, orden);
+
+
+/*
+ * Consultar subcategorias activas de una categoria.
+ */
+CREATE INDEX idx_categoria_padre_activo
+    ON categorias(categoria_padre_id, activo);
 
 
 /*
  * ============================================================
- * FIN DE LA MIGRACION
+ * NOTAS DE IMPLEMENTACION
  * ============================================================
  *
- * NOTAS:
+ * 1. categoria_padre_id NULL indica que es una categoria
+ *    principal.
  *
- * 1. No se insertan categorias predeterminadas aqui.
- * 2. Las categorias se crearan durante la configuracion
- *    inicial segun el giro comercial.
- * 3. Una categoria utilizada por productos debe desactivarse
- *    en lugar de eliminarse.
- * 4. La aplicacion debe validar que no se repitan nombres
- *    ni codigos.
+ * 2. categoria_padre_id con un ID indica que es una
+ *    subcategoria.
+ *
+ * 3. No se insertan categorias predeterminadas.
+ *    Se configuraran segun el giro comercial.
+ *
+ * 4. Una categoria utilizada por productos debe
+ *    desactivarse en lugar de eliminarse.
+ *
+ * 5. La aplicacion debe validar que una categoria
+ *    no se asigne a si misma ni se creen ciclos
+ *    entre categorias y subcategorias.
+ *
+ * 6. La aplicacion debe validar que la categoria
+ *    padre exista y se encuentre activa al registrar
+ *    una subcategoria.
+ *
+ * 7. No permitir eliminar categorias que tengan
+ *    productos o subcategorias relacionadas.
+ *
+ * ============================================================
+ * FIN DE LA MIGRACION 012
  * ============================================================
  */
