@@ -102,14 +102,6 @@ CREATE TABLE categorias (
             OR CHAR_LENGTH(TRIM(icono)) > 0
         ),
 
-    /*
-     * Una categoria no puede ser su propio padre.
-     */
-    CONSTRAINT chk_categoria_padre
-        CHECK (
-            categoria_padre_id IS NULL
-            OR categoria_padre_id <> id
-        )
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
