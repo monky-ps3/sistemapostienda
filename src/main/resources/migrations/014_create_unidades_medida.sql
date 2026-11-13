@@ -117,11 +117,6 @@ CREATE TABLE unidades_medida (
     CONSTRAINT chk_unidad_factor
         CHECK (factor_conversion > 0),
 
-    CONSTRAINT chk_unidad_base
-        CHECK (
-            unidad_base_id IS NULL
-            OR unidad_base_id <> id
-        )
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
