@@ -104,6 +104,14 @@ CREATE TABLE ventas (
 
     PRIMARY KEY (id),
 
+    /* Claves compuestas para impedir que una venta mezcle
+       sucursal, caja y sesión de cajas diferentes. */
+    CONSTRAINT uk_venta_id_caja_sesion
+        UNIQUE (id, caja_id, sesion_caja_id),
+
+    CONSTRAINT uk_venta_id_sucursal
+        UNIQUE (id, sucursal_id),
+
     /*
      * Un folio puede repetirse en otra sucursal,
      * pero no dentro de la misma sucursal.
@@ -120,15 +128,15 @@ CREATE TABLE ventas (
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
-    CONSTRAINT fk_venta_caja
-        FOREIGN KEY (caja_id)
-        REFERENCES cajas(id)
+    CONSTRAINT fk_venta_caja_sucursal
+        FOREIGN KEY (caja_id, sucursal_id)
+        REFERENCES cajas(id, sucursal_id)
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
-    CONSTRAINT fk_venta_sesion
-        FOREIGN KEY (sesion_caja_id)
-        REFERENCES sesiones_caja(id)
+    CONSTRAINT fk_venta_sesion_caja
+        FOREIGN KEY (sesion_caja_id, caja_id)
+        REFERENCES sesiones_caja(id, caja_id)
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
