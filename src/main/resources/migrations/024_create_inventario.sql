@@ -83,6 +83,11 @@ CREATE TABLE inventario (
     CONSTRAINT uk_inventario_id_sucursal_producto
         UNIQUE (id, sucursal_id, producto_id),
 
+    /* Clave compuesta para validar el producto asociado
+       a un registro de inventario desde el detalle de venta. */
+    CONSTRAINT uk_inventario_id_producto
+        UNIQUE (id, producto_id),
+
     /*
      * Relaciones.
      */
