@@ -79,7 +79,7 @@ INSERT INTO rol_permiso (rol_id, permiso_id)
 SELECT r.id, p.id
 FROM roles r
 CROSS JOIN permisos p
-WHERE r.nombre = 'Administrador'
+WHERE r.clave = 'ADMIN'
   AND r.activo = TRUE
   AND p.activo = TRUE;
 
@@ -122,7 +122,7 @@ JOIN permisos p
       'REPORTE_VER',
       'CONFIGURACION_VER'
   )
-WHERE r.nombre = 'Supervisor'
+WHERE r.clave = 'SUPERVISOR'
   AND r.activo = TRUE
   AND p.activo = TRUE;
 
@@ -152,7 +152,7 @@ JOIN permisos p
       'CAJA_MOVIMIENTO',
       'CAJA_CERRAR'
   )
-WHERE r.nombre = 'Cajero'
+WHERE r.clave = 'CAJERO'
   AND r.activo = TRUE
   AND p.activo = TRUE;
 
@@ -185,6 +185,6 @@ JOIN permisos p
       'COMPRA_VER',
       'COMPRA_CREAR'
   )
-WHERE r.nombre = 'Bodega'
+WHERE r.clave = 'BODEGA'
   AND r.activo = TRUE
   AND p.activo = TRUE;
