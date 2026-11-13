@@ -6,6 +6,27 @@
  * Author:  monky
  * Created: 2 jul 2026
  */
+
+/*
+ * ============================================================
+ * MIGRACIÓN 024: INVENTARIO
+ * ============================================================
+ *
+ * Control de existencias por sucursal y producto.
+ *
+ * Permite manejar:
+ * - Productos sin lotes.
+ * - Productos con lotes.
+ * - Productos con fecha de caducidad.
+ * - Existencias reservadas.
+ * - Costos de inventario.
+ *
+ * Cada producto tendrá un registro de inventario
+ * sin lote o registros separados por cada lote.
+ *
+ * ============================================================
+ */
+
 CREATE TABLE inventario (
 
     id BIGINT NOT NULL AUTO_INCREMENT,
@@ -14,46 +35,82 @@ CREATE TABLE inventario (
 
     producto_id BIGINT NOT NULL,
 
-   lote VARCHAR(100) NOT NULL DEFAULT '',
+    /*
+     * NULL para productos sin control de lotes.
+     * Se registra el número de lote cuando aplica.
+     */
+    lote VARCHAR(100) NULL,
 
     fecha_caducidad DATE NULL,
 
-    existencia DECIMAL(12,3) NOT NULL DEFAULT 0,
+    existencia DECIMAL(15,4) NOT NULL DEFAULT 0,
 
-    existencia_reservada DECIMAL(12,3) NOT NULL DEFAULT 0,
+    existencia_reservada DECIMAL(15,4) NOT NULL DEFAULT 0,
 
-    existencia_minima DECIMAL(12,3) NOT NULL DEFAULT 0,
+    existencia_minima DECIMAL(15,4) NOT NULL DEFAULT 0,
 
-    existencia_maxima DECIMAL(12,3) NULL,
+    existencia_maxima DECIMAL(15,4) NULL,
 
-    ultimo_costo DECIMAL(12,4) NOT NULL DEFAULT 0,
+    ultimo_costo DECIMAL(15,4) NOT NULL DEFAULT 0,
 
-    costo_promedio DECIMAL(12,4) NOT NULL DEFAULT 0,
+    costo_promedio DECIMAL(15,4) NOT NULL DEFAULT 0,
 
     ubicacion VARCHAR(100) NULL,
 
     activo BOOLEAN NOT NULL DEFAULT TRUE,
 
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    /*
+     * Normaliza el lote NULL como cadena vacía
+     * para poder garantizar un único registro
+     * sin lote por sucursal y producto.
+     */
+    lote_clave VARCHAR(100)
+        GENERATED ALWAYS AS (
+            COALESCE(lote, '')
+        ) STORED,
 
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
 
+    /*
+     * Relaciones.
+     */
     CONSTRAINT fk_inventario_sucursal
         FOREIGN KEY (sucursal_id)
-        REFERENCES sucursales(id),
+        REFERENCES sucursales(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
 
     CONSTRAINT fk_inventario_producto
         FOREIGN KEY (producto_id)
-        REFERENCES productos(id),
+        REFERENCES productos(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
 
+    /*
+     * Evita duplicar el inventario del mismo
+     * producto, sucursal y lote.
+     */
+    CONSTRAINT uk_inventario_sucursal_producto_lote
+        UNIQUE (sucursal_id, producto_id, lote_clave),
+
+    /*
+     * Validaciones de existencias.
+     */
     CONSTRAINT chk_inventario_existencia
         CHECK (existencia >= 0),
 
     CONSTRAINT chk_inventario_reservada
-        CHECK (existencia_reservada >= 0),
+        CHECK (
+            existencia_reservada >= 0
+            AND existencia_reservada <= existencia
+        ),
 
     CONSTRAINT chk_inventario_minima
         CHECK (existencia_minima >= 0),
@@ -64,17 +121,29 @@ CREATE TABLE inventario (
             OR existencia_maxima >= existencia_minima
         ),
 
+    /*
+     * Validaciones de costos.
+     */
     CONSTRAINT chk_inventario_costo
         CHECK (
             ultimo_costo >= 0
             AND costo_promedio >= 0
         ),
 
-    CONSTRAINT uk_inventario
-        UNIQUE (
-            sucursal_id,
-            producto_id,
-            lote
+    /*
+     * Un registro sin lote no puede tener
+     * fecha de caducidad.
+     *
+     * Si existe un lote, no puede estar vacío.
+     */
+    CONSTRAINT chk_inventario_lote_caducidad
+        CHECK (
+            (lote IS NULL AND fecha_caducidad IS NULL)
+            OR
+            (
+                lote IS NOT NULL
+                AND CHAR_LENGTH(TRIM(lote)) > 0
+            )
         )
 
 ) ENGINE=InnoDB
@@ -82,20 +151,42 @@ DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_unicode_ci;
 
 
+/*
+ * ============================================================
+ * ÍNDICES
+ * ============================================================
+ */
+
+/*
+ * Consultar inventario de un producto.
+ */
 CREATE INDEX idx_inventario_producto
-    ON inventario(producto_id);
+ON inventario(producto_id);
 
+
+/*
+ * Consultar productos de una sucursal.
+ */
 CREATE INDEX idx_inventario_sucursal
-    ON inventario(sucursal_id);
+ON inventario(sucursal_id);
 
+
+/*
+ * Consultar inventario activo por sucursal.
+ */
+CREATE INDEX idx_inventario_sucursal_activo
+ON inventario(sucursal_id, activo);
+
+
+/*
+ * Consultar productos próximos a caducar.
+ */
 CREATE INDEX idx_inventario_caducidad
-    ON inventario(fecha_caducidad);
+ON inventario(fecha_caducidad);
 
-CREATE INDEX idx_inventario_lote
-    ON inventario(lote);
 
-CREATE INDEX idx_inventario_activo
-    ON inventario(activo);
-
+/*
+ * Consultar existencias por disponibilidad.
+ */
 CREATE INDEX idx_inventario_existencia
-    ON inventario(existencia);
+ON inventario(sucursal_id, existencia);
