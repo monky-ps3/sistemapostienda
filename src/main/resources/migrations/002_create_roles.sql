@@ -19,6 +19,9 @@ CREATE TABLE roles (
      * Cajero
      * Bodega
      */
+    /* Clave interna estable; no debe cambiar aunque cambie el nombre visible. */
+    clave VARCHAR(30) NOT NULL,
+
     nombre VARCHAR(100) NOT NULL,
 
     /*
@@ -50,8 +53,17 @@ CREATE TABLE roles (
     /*
      * No puede existir otro rol con el mismo nombre.
      */
+    CONSTRAINT uk_roles_clave
+        UNIQUE (clave),
+
     CONSTRAINT uk_roles_nombre
-        UNIQUE (nombre)
+        UNIQUE (nombre),
+
+    CONSTRAINT chk_roles_clave_no_vacia
+        CHECK (CHAR_LENGTH(TRIM(clave)) > 0),
+
+    CONSTRAINT chk_roles_nombre_no_vacio
+        CHECK (CHAR_LENGTH(TRIM(nombre)) > 0)
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
@@ -76,27 +88,32 @@ ON roles(activo);
 
 INSERT INTO roles
 (
+    clave,
     nombre,
     descripcion,
     activo
 )
 VALUES
 (
+    'ADMIN',
     'Administrador',
     'Acceso completo al sistema',
     TRUE
 ),
 (
+    'SUPERVISOR',
     'Supervisor',
     'Supervisión y reportes',
     TRUE
 ),
 (
+    'CAJERO',
     'Cajero',
     'Realiza ventas y cobros',
     TRUE
 ),
 (
+    'BODEGA',
     'Bodega',
     'Control de inventario y compras',
     TRUE
