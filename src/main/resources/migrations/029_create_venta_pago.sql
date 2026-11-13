@@ -113,9 +113,9 @@ CREATE TABLE ventas_pago (
     /*
      * Relaciones principales.
      */
-    CONSTRAINT fk_ventas_pago_venta
-        FOREIGN KEY (venta_id)
-        REFERENCES ventas(id)
+    CONSTRAINT fk_ventas_pago_venta_caja_sesion
+        FOREIGN KEY (venta_id, caja_id, sesion_caja_id)
+        REFERENCES ventas(id, caja_id, sesion_caja_id)
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
@@ -143,9 +143,9 @@ CREATE TABLE ventas_pago (
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
-    CONSTRAINT fk_ventas_pago_movimiento
-        FOREIGN KEY (movimiento_caja_id)
-        REFERENCES movimientos_caja(id)
+    CONSTRAINT fk_ventas_pago_movimiento_sesion
+        FOREIGN KEY (movimiento_caja_id, sesion_caja_id)
+        REFERENCES movimientos_caja(id, sesion_caja_id)
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
