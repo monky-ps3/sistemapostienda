@@ -69,6 +69,11 @@ CREATE TABLE sesiones_caja (
 
     PRIMARY KEY (id),
 
+    /* Permite comprobar que una venta y su pago utilicen
+       la sesión correspondiente a la caja seleccionada. */
+    CONSTRAINT uk_sesion_id_caja
+        UNIQUE (id, caja_id),
+
     CONSTRAINT uk_sesion_folio
         UNIQUE (folio),
 
