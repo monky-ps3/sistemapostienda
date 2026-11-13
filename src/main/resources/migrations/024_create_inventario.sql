@@ -78,6 +78,11 @@ CREATE TABLE inventario (
 
     PRIMARY KEY (id),
 
+    /* Clave compuesta para validar producto y sucursal
+       al relacionar movimientos del inventario. */
+    CONSTRAINT uk_inventario_id_sucursal_producto
+        UNIQUE (id, sucursal_id, producto_id),
+
     /*
      * Relaciones.
      */
