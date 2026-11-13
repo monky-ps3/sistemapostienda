@@ -1,16 +1,10 @@
-/* 
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Other/SQLTemplate.sql to edit this template
- */
-/**
- * Author:  monky
- * Created: 2 jul 2026
- */
 /*
  * ============================================================
  * Tabla: sucursales
  * Descripción:
  * Almacena las sucursales de la empresa.
+ * La instalación inicial registra únicamente la sucursal Matriz.
+ * Las demás sucursales se crearán desde el módulo de administración.
  * ============================================================
  */
 
@@ -18,36 +12,22 @@ CREATE TABLE sucursales (
 
     id BIGINT NOT NULL AUTO_INCREMENT,
 
-    /*
-     * Nombre de la sucursal.
-     */
+    /* Nombre de la sucursal. */
     nombre VARCHAR(150) NOT NULL,
-    /*     * Código único de la sucursal.
-     * Ejemplo:* MAT,* CEN,* NOR, */
+
+    /* Código único de la sucursal. Ejemplo: MAT, CEN, NOR. */
     codigo VARCHAR(20) NOT NULL,
 
-    /** Dirección completa.*/
+    /* Datos de contacto. */
     direccion VARCHAR(255),
-
-    /* Teléfono de contacto. */
     telefono VARCHAR(20),
-
-    /** Correo electrónico.*/
     correo VARCHAR(150),
 
-    /* Pendiente de definir.
-     * En el futuro podría convertirse en:
-     * responsable_id BIGINT
-     * con llave foránea hacia usuarios.
-     */
-
-
-    /* Estado de la sucursal.*/
+    /* Estado de la sucursal. */
     activo BOOLEAN NOT NULL DEFAULT TRUE,
 
-    /* Auditoría.*/
-    created_at TIMESTAMP NOT NULL
-        DEFAULT CURRENT_TIMESTAMP,
+    /* Auditoría. */
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     updated_at TIMESTAMP NOT NULL
         DEFAULT CURRENT_TIMESTAMP
@@ -56,82 +36,42 @@ CREATE TABLE sucursales (
     PRIMARY KEY (id),
 
     CONSTRAINT uk_sucursales_codigo
-        UNIQUE (codigo)
+        UNIQUE (codigo),
+
+    CONSTRAINT chk_sucursales_nombre_no_vacio
+        CHECK (CHAR_LENGTH(TRIM(nombre)) > 0),
+
+    CONSTRAINT chk_sucursales_codigo_no_vacio
+        CHECK (CHAR_LENGTH(TRIM(codigo)) > 0)
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_unicode_ci;
 
-/* Índices*/
-
-CREATE INDEX idx_sucursales_activo
-ON sucursales(activo);
+/* Índices para consultas y filtros del módulo de sucursales. */
+CREATE INDEX idx_sucursales_activo_nombre
+ON sucursales(activo, nombre);
 
 CREATE INDEX idx_sucursales_nombre
 ON sucursales(nombre);
-
-CREATE INDEX idx_sucursales_codigo
-ON sucursales(codigo);
 
 /*
  * ============================================================
  * Datos iniciales
  * ============================================================
+ * Solo se crea Matriz. Las demás sucursales se registran desde
+ * el sistema, evitando datos de ejemplo en instalaciones reales.
  */
 
 INSERT INTO sucursales
 (
     nombre,
     codigo,
-    direccion,
-    telefono,
-    correo,
     activo
 )
 VALUES
 (
     'Matriz',
     'MAT',
-    'Dirección pendiente',
-    '9510000000',
-    'matriz@empresa.com',
-    TRUE
-);
-
-INSERT INTO sucursales
-(
-    nombre,
-    codigo,
-    direccion,
-    telefono,
-    correo,
-    activo
-)
-VALUES
-(
-    'Sucursal Centro',
-    'CEN',
-    'Dirección pendiente',
-    '9510000001',
-    'centro@empresa.com',
-    TRUE
-);
-
-INSERT INTO sucursales
-(
-    nombre,
-    codigo,
-    direccion,
-    telefono,
-    correo,
-    activo
-)
-VALUES
-(
-    'Sucursal Norte',
-    'NOR',
-    'Dirección pendiente',
-    '9510000002',
-    'norte@empresa.com',
     TRUE
 );
