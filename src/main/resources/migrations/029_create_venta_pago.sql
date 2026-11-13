@@ -65,15 +65,15 @@ CREATE TABLE ventas_pago (
     /*
      * Importe aplicado a la venta o al saldo pendiente.
      */
-    monto DECIMAL(12,2) NOT NULL,
+    monto DECIMAL(14,2) NOT NULL,
 
     /*
      * Cantidad entregada por el cliente.
      * Puede ser mayor que monto cuando existe cambio.
      */
-    monto_recibido DECIMAL(12,2) NOT NULL,
+    monto_recibido DECIMAL(14,2) NOT NULL,
 
-    cambio DECIMAL(12,2) NOT NULL DEFAULT 0,
+    cambio DECIMAL(14,2) NOT NULL DEFAULT 0,
 
     /*
      * Datos historicos de la forma de pago.
