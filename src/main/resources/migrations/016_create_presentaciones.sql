@@ -84,6 +84,11 @@ CREATE TABLE presentaciones (
 
     PRIMARY KEY (id),
 
+    /* Clave compuesta para validar que la presentación
+       corresponda al producto indicado en compras y ventas. */
+    CONSTRAINT uk_presentacion_id_producto
+        UNIQUE (id, producto_id),
+
     /*
      * No repetir el nombre de una presentacion
      * dentro del mismo producto.
