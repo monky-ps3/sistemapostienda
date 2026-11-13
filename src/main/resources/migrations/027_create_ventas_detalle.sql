@@ -7,6 +7,20 @@
  * Created: 6 jul 2026
  */
 
+/*
+ * ============================================================
+ * MIGRACIÓN 027: DETALLE DE VENTAS
+ * ============================================================
+ *
+ * Registra cada producto vendido.
+ *
+ * Conserva los datos del producto, presentación,
+ * cantidades, costos, precios, descuentos e impuestos
+ * utilizados al momento de la venta.
+ *
+ * ============================================================
+ */
+
 CREATE TABLE ventas_detalle (
 
     id BIGINT NOT NULL AUTO_INCREMENT,
@@ -17,64 +31,160 @@ CREATE TABLE ventas_detalle (
 
     presentacion_id BIGINT NOT NULL,
 
-    inventario_id BIGINT,
+    inventario_id BIGINT NULL,
 
-    cantidad DECIMAL(12,3) NOT NULL,
+    /*
+     * Datos históricos del producto.
+     * Evitan perder información si cambia su nombre
+     * o código en el catálogo.
+     */
+    producto_codigo VARCHAR(50) NOT NULL,
 
-    factor_conversion DECIMAL(12,3) NOT NULL,
+    producto_nombre VARCHAR(200) NOT NULL,
 
-    precio_unitario DECIMAL(12,4) NOT NULL,
+    presentacion_nombre VARCHAR(100) NOT NULL,
 
-    costo_unitario DECIMAL(12,4) NOT NULL,
+    cantidad DECIMAL(15,4) NOT NULL,
 
-    descuento DECIMAL(12,2) NOT NULL DEFAULT 0,
+    factor_conversion DECIMAL(15,6) NOT NULL,
+
+    precio_unitario DECIMAL(15,4) NOT NULL,
+
+    costo_unitario DECIMAL(15,4) NOT NULL,
+
+    descuento DECIMAL(14,2) NOT NULL DEFAULT 0,
 
     porcentaje_impuesto DECIMAL(5,2) NOT NULL DEFAULT 0,
 
-    importe_impuesto DECIMAL(12,2) NOT NULL DEFAULT 0,
+    importe_impuesto DECIMAL(14,2) NOT NULL DEFAULT 0,
 
-    subtotal DECIMAL(12,2) NOT NULL,
+    subtotal DECIMAL(14,2) NOT NULL,
 
-    total DECIMAL(12,2) NOT NULL,
+    total DECIMAL(14,2) NOT NULL,
 
-    utilidad DECIMAL(12,2) NOT NULL DEFAULT 0,
+    /*
+     * Puede ser negativo si se vende por debajo del costo.
+     */
+    utilidad DECIMAL(14,2) NOT NULL DEFAULT 0,
 
-    lote VARCHAR(100),
+    lote VARCHAR(100) NULL,
 
-    fecha_caducidad DATE,
+    fecha_caducidad DATE NULL,
 
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP,
 
-    PRIMARY KEY(id),
+    PRIMARY KEY (id),
 
+    /*
+     * No eliminar detalles que formen parte
+     * del historial de una venta.
+     */
     CONSTRAINT fk_venta_detalle_venta
         FOREIGN KEY (venta_id)
-        REFERENCES ventas(id),
+        REFERENCES ventas(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
 
     CONSTRAINT fk_venta_detalle_producto
         FOREIGN KEY (producto_id)
-        REFERENCES productos(id),
+        REFERENCES productos(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
 
     CONSTRAINT fk_venta_detalle_presentacion
         FOREIGN KEY (presentacion_id)
-        REFERENCES presentaciones(id),
+        REFERENCES presentaciones(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
 
     CONSTRAINT fk_venta_detalle_inventario
         FOREIGN KEY (inventario_id)
         REFERENCES inventario(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
+
+    CONSTRAINT chk_venta_detalle_codigo
+        CHECK (CHAR_LENGTH(TRIM(producto_codigo)) > 0),
+
+    CONSTRAINT chk_venta_detalle_nombre
+        CHECK (CHAR_LENGTH(TRIM(producto_nombre)) > 0),
+
+    CONSTRAINT chk_venta_detalle_presentacion_nombre
+        CHECK (CHAR_LENGTH(TRIM(presentacion_nombre)) > 0),
+
+    CONSTRAINT chk_venta_detalle_cantidad
+        CHECK (cantidad > 0),
+
+    CONSTRAINT chk_venta_detalle_factor
+        CHECK (factor_conversion > 0),
+
+    CONSTRAINT chk_venta_detalle_precio
+        CHECK (precio_unitario >= 0),
+
+    CONSTRAINT chk_venta_detalle_costo
+        CHECK (costo_unitario >= 0),
+
+    CONSTRAINT chk_venta_detalle_descuento
+        CHECK (descuento >= 0),
+
+    CONSTRAINT chk_venta_detalle_impuesto_porcentaje
+        CHECK (
+            porcentaje_impuesto >= 0
+            AND porcentaje_impuesto <= 100
+        ),
+
+    CONSTRAINT chk_venta_detalle_impuesto
+        CHECK (importe_impuesto >= 0),
+
+    CONSTRAINT chk_venta_detalle_subtotal
+        CHECK (subtotal >= 0),
+
+    CONSTRAINT chk_venta_detalle_total
+        CHECK (total >= 0),
+
+    CONSTRAINT chk_venta_detalle_descuento_subtotal
+        CHECK (descuento <= subtotal),
+
+    CONSTRAINT chk_venta_detalle_total_calculo
+        CHECK (
+            total = subtotal - descuento + importe_impuesto
+        ),
+
+    /*
+     * Si existe caducidad, debe existir un lote.
+     */
+    CONSTRAINT chk_venta_detalle_lote_caducidad
+        CHECK (
+            fecha_caducidad IS NULL
+            OR (
+                lote IS NOT NULL
+                AND CHAR_LENGTH(TRIM(lote)) > 0
+            )
+        )
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_unicode_ci;
 
-CREATE INDEX idx_venta_detalle_venta
-ON ventas_detalle(venta_id);
+
+/*
+ * ============================================================
+ * ÍNDICES
+ * ============================================================
+ */
 
 CREATE INDEX idx_venta_detalle_producto
 ON ventas_detalle(producto_id);
+
+CREATE INDEX idx_venta_detalle_presentacion
+ON ventas_detalle(presentacion_id);
 
 CREATE INDEX idx_venta_detalle_inventario
 ON ventas_detalle(inventario_id);
 
 CREATE INDEX idx_venta_detalle_lote
 ON ventas_detalle(lote);
+
+CREATE INDEX idx_venta_detalle_caducidad
+ON ventas_detalle(fecha_caducidad);
