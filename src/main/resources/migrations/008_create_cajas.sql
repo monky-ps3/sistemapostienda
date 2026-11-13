@@ -39,6 +39,10 @@ CREATE TABLE cajas (
 
     PRIMARY KEY (id),
 
+    /* Clave compuesta para validar la sucursal de cada caja. */
+    CONSTRAINT uk_caja_id_sucursal
+        UNIQUE (id, sucursal_id),
+
     /*
      * El nombre de caja debe ser unico dentro de su sucursal.
      */
