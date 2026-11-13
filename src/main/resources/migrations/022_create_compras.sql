@@ -73,8 +73,10 @@ CREATE TABLE compras (
 
     PRIMARY KEY (id),
 
-    CONSTRAINT uk_compra_folio
-        UNIQUE (folio),
+    /* El folio se genera por sucursal: puede repetirse
+       en otra sucursal, pero no dentro de la misma. */
+    CONSTRAINT uk_compra_sucursal_folio
+        UNIQUE (sucursal_id, folio),
 
     CONSTRAINT fk_compra_sucursal
         FOREIGN KEY (sucursal_id)
