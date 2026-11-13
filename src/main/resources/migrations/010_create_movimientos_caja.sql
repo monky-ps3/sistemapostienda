@@ -81,6 +81,11 @@ CREATE TABLE movimientos_caja (
 
     PRIMARY KEY (id),
 
+    /* Clave compuesta para relacionar un pago con un movimiento
+       perteneciente exactamente a su misma sesión de caja. */
+    CONSTRAINT uk_movimiento_id_sesion
+        UNIQUE (id, sesion_caja_id),
+
     /*
      * Una misma referencia no puede generar dos
      * movimientos con el mismo tipo de origen.
