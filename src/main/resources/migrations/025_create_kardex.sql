@@ -105,15 +105,15 @@ CREATE TABLE kardex (
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
-    CONSTRAINT fk_kardex_presentacion
-        FOREIGN KEY (presentacion_id)
-        REFERENCES presentaciones(id)
+    CONSTRAINT fk_kardex_presentacion_producto
+        FOREIGN KEY (presentacion_id, producto_id)
+        REFERENCES presentaciones(id, producto_id)
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
-    CONSTRAINT fk_kardex_inventario
-        FOREIGN KEY (inventario_id)
-        REFERENCES inventario(id)
+    CONSTRAINT fk_kardex_inventario_sucursal_producto
+        FOREIGN KEY (inventario_id, sucursal_id, producto_id)
+        REFERENCES inventario(id, sucursal_id, producto_id)
         ON UPDATE RESTRICT
         ON DELETE RESTRICT,
 
