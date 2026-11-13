@@ -115,8 +115,7 @@ CREATE TABLE unidades_medida (
         CHECK (CHAR_LENGTH(TRIM(abreviatura)) > 0),
 
     CONSTRAINT chk_unidad_factor
-        CHECK (factor_conversion > 0),
-
+        CHECK (factor_conversion > 0)
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
