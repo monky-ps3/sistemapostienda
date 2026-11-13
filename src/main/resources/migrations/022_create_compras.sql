@@ -6,134 +6,139 @@
  * Author:  monky
  * Created: 2 jul 2026
  */
+
+/*
+ * ============================================================
+ * MIGRACIÓN 022: COMPRAS
+ * ============================================================
+ *
+ * Registro de compras realizadas a proveedores.
+ *
+ * Una compra pertenece a una sucursal, un proveedor
+ * y un usuario responsable.
+ *
+ * Estados:
+ * BORRADOR    = En captura, todavía no afecta inventario.
+ * CONFIRMADA  = Compra registrada y recibida.
+ * CANCELADA   = Compra cancelada.
+ *
+ * ============================================================
+ */
+
 CREATE TABLE compras (
 
     id BIGINT NOT NULL AUTO_INCREMENT,
 
-    /*
-     * Sucursal donde se realiza/recibe la compra.
-     */
     sucursal_id BIGINT NOT NULL,
 
-    /*
-     * Proveedor al que se realiza la compra.
-     */
     proveedor_id BIGINT NOT NULL,
 
-    /*
-     * Usuario que registra la compra.
-     */
     usuario_id BIGINT NOT NULL,
 
-    /*
-     * Folio interno de la compra.
-     */
     folio VARCHAR(30) NOT NULL,
 
-    /*
-     * Número de factura del proveedor.
-     */
-    factura VARCHAR(100),
+    factura VARCHAR(100) NULL,
 
-    /*
-     * Referencia adicional.
-     * Ejemplo:
-     * número de pedido, remisión, orden de compra, etc.
-     */
-    referencia VARCHAR(100),
+    referencia VARCHAR(100) NULL,
 
-    /*
-     * Fecha en que se realizó la compra.
-     */
     fecha_compra DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    /*
-     * Forma de la operación de compra.
-     */
     tipo_compra ENUM(
         'CONTADO',
         'CREDITO'
     ) NOT NULL DEFAULT 'CONTADO',
 
-    /*
-     * Importes generales de la compra.
-     */
-    subtotal DECIMAL(12,2) NOT NULL DEFAULT 0,
+    subtotal DECIMAL(14,2) NOT NULL DEFAULT 0,
 
-    descuento DECIMAL(12,2) NOT NULL DEFAULT 0,
+    descuento DECIMAL(14,2) NOT NULL DEFAULT 0,
 
-    impuesto DECIMAL(12,2) NOT NULL DEFAULT 0,
+    impuesto DECIMAL(14,2) NOT NULL DEFAULT 0,
 
-    total DECIMAL(12,2) NOT NULL DEFAULT 0,
+    total DECIMAL(14,2) NOT NULL DEFAULT 0,
 
-    /*
-     * Observaciones.
-     */
-    observaciones TEXT,
+    observaciones TEXT NULL,
 
-    /*
-     * Estado de la compra.
-     */
     estado ENUM(
         'BORRADOR',
         'CONFIRMADA',
         'CANCELADA'
     ) NOT NULL DEFAULT 'BORRADOR',
 
-    /*
-     * Auditoría.
-     */
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP,
 
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
 
-    /*
-     * Folio único.
-     */
     CONSTRAINT uk_compra_folio
         UNIQUE (folio),
 
-    /*
-     * Relaciones.
-     */
     CONSTRAINT fk_compra_sucursal
         FOREIGN KEY (sucursal_id)
-        REFERENCES sucursales(id),
+        REFERENCES sucursales(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
 
     CONSTRAINT fk_compra_proveedor
         FOREIGN KEY (proveedor_id)
-        REFERENCES proveedores(id),
+        REFERENCES proveedores(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
 
     CONSTRAINT fk_compra_usuario
         FOREIGN KEY (usuario_id)
         REFERENCES usuarios(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
+
+    CONSTRAINT chk_compra_folio
+        CHECK (CHAR_LENGTH(TRIM(folio)) > 0),
+
+    CONSTRAINT chk_compra_subtotal
+        CHECK (subtotal >= 0),
+
+    CONSTRAINT chk_compra_descuento
+        CHECK (descuento >= 0),
+
+    CONSTRAINT chk_compra_impuesto
+        CHECK (impuesto >= 0),
+
+    CONSTRAINT chk_compra_total
+        CHECK (total >= 0),
+
+    CONSTRAINT chk_compra_descuento_subtotal
+        CHECK (descuento <= subtotal),
+
+    CONSTRAINT chk_compra_total_calculo
+        CHECK (
+            total = subtotal - descuento + impuesto
+        )
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_unicode_ci;
 
 
--- ============================================================
--- ÍNDICES
--- ============================================================
+/*
+ * ============================================================
+ * ÍNDICES
+ * ============================================================
+ */
 
-CREATE INDEX idx_compra_fecha
-ON compras(fecha_compra);
+CREATE INDEX idx_compra_sucursal_fecha
+ON compras(sucursal_id, fecha_compra);
 
-CREATE INDEX idx_compra_proveedor
-ON compras(proveedor_id);
+CREATE INDEX idx_compra_proveedor_fecha
+ON compras(proveedor_id, fecha_compra);
 
-CREATE INDEX idx_compra_sucursal
-ON compras(sucursal_id);
+CREATE INDEX idx_compra_usuario_fecha
+ON compras(usuario_id, fecha_compra);
 
-CREATE INDEX idx_compra_usuario
-ON compras(usuario_id);
-
-CREATE INDEX idx_compra_estado
-ON compras(estado);
+CREATE INDEX idx_compra_estado_fecha
+ON compras(estado, fecha_compra);
 
 CREATE INDEX idx_compra_tipo
 ON compras(tipo_compra);
