@@ -118,6 +118,9 @@ JOIN permisos p
       'VENTA_VER',
       'VENTA_CREAR',
       'VENTA_CANCELAR',
+      'CAJA_ABRIR',
+      'CAJA_MOVIMIENTO',
+      'CAJA_CERRAR',
       'CAJA_VER_REPORTES',
       'REPORTE_VER',
       'CONFIGURACION_VER'
@@ -149,7 +152,6 @@ JOIN permisos p
       'VENTA_VER',
       'VENTA_CREAR',
       'CAJA_ABRIR',
-      'CAJA_MOVIMIENTO',
       'CAJA_CERRAR'
   )
 WHERE r.clave = 'CAJERO'
