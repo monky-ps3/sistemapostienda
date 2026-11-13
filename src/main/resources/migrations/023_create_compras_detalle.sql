@@ -6,141 +6,134 @@
  * Author:  monky
  * Created: 2 jul 2026
  */
+
+/*
+ * ============================================================
+ * MIGRACIÓN 023: DETALLE DE COMPRAS
+ * ============================================================
+ *
+ * Almacena los productos y cantidades de cada compra.
+ *
+ * Conserva los costos, descuentos, impuestos
+ * y factores de conversión utilizados al comprar.
+ *
+ * Esto permite mantener el historial aunque después
+ * cambien los precios o las presentaciones.
+ *
+ * ============================================================
+ */
+
 CREATE TABLE compras_detalle (
 
     id BIGINT NOT NULL AUTO_INCREMENT,
 
-    /*
-     * Compra a la que pertenece este detalle.
-     */
     compra_id BIGINT NOT NULL,
 
-    /*
-     * Producto comprado.
-     */
     producto_id BIGINT NOT NULL,
 
-    /*
-     * Presentación utilizada en la compra.
-     *
-     * Ejemplo:
-     * PIEZA
-     * PAQUETE
-     * CAJA
-     */
     presentacion_id BIGINT NOT NULL,
 
-    /*
-     * Cantidad comprada en la presentación seleccionada.
-     *
-     * Ejemplo:
-     * 5 cajas
-     * 10 paquetes
-     * 20 piezas
-     */
-    cantidad DECIMAL(12,3) NOT NULL,
+    cantidad DECIMAL(15,4) NOT NULL,
 
-    /*
-     * Factor de conversión utilizado en el momento
-     * de realizar la compra.
-     *
-     * Ejemplo:
-     *
-     * CAJA = 24 piezas
-     * factor_conversion = 24
-     *
-     * Se guarda aquí para conservar el histórico,
-     * aunque posteriormente cambie la configuración
-     * de la presentación.
-     */
-    factor_conversion DECIMAL(12,3) NOT NULL,
+    factor_conversion DECIMAL(15,6) NOT NULL,
 
-    /*
-     * Costo de una unidad de la presentación comprada.
-     *
-     * Se utilizan 4 decimales para permitir costos
-     * muy precisos.
-     */
-    costo_unitario DECIMAL(12,4) NOT NULL,
+    costo_unitario DECIMAL(15,4) NOT NULL,
 
-    /*
-     * Descuento aplicado a esta línea.
-     */
-    descuento DECIMAL(12,2) NOT NULL DEFAULT 0,
+    descuento DECIMAL(14,2) NOT NULL DEFAULT 0,
 
-    /*
-     * Porcentaje de impuesto aplicado.
-     *
-     * Ejemplo:
-     * 16.00
-     * 0.00
-     */
     porcentaje_impuesto DECIMAL(5,2) NOT NULL DEFAULT 0,
 
-    /*
-     * Importe monetario del impuesto.
-     */
-    importe_impuesto DECIMAL(12,2) NOT NULL DEFAULT 0,
+    importe_impuesto DECIMAL(14,2) NOT NULL DEFAULT 0,
 
-    /*
-     * Importe antes del impuesto.
-     */
-    subtotal DECIMAL(12,2) NOT NULL,
+    subtotal DECIMAL(14,2) NOT NULL,
 
-    /*
-     * Importe final de la línea.
-     */
-    total DECIMAL(12,2) NOT NULL,
+    total DECIMAL(14,2) NOT NULL,
 
-    /*
-     * Lote del producto.
-     *
-     * Se utiliza cuando el producto maneja lotes.
-     */
-    lote VARCHAR(100),
+    lote VARCHAR(100) NULL,
 
-    /*
-     * Fecha de caducidad.
-     *
-     * Se utiliza cuando el producto maneja caducidad.
-     */
-    fecha_caducidad DATE,
+    fecha_caducidad DATE NULL,
 
-    /*
-     * Auditoría.
-     */
     created_at TIMESTAMP NOT NULL
         DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
 
     /*
-     * Relaciones.
+     * Al eliminar una compra en borrador,
+     * sus detalles pueden eliminarse junto con ella.
+     *
+     * Las compras confirmadas no deben eliminarse
+     * desde la aplicación.
      */
     CONSTRAINT fk_compra_detalle_compra
         FOREIGN KEY (compra_id)
         REFERENCES compras(id)
+        ON UPDATE RESTRICT
         ON DELETE CASCADE,
 
     CONSTRAINT fk_compra_detalle_producto
         FOREIGN KEY (producto_id)
-        REFERENCES productos(id),
+        REFERENCES productos(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
 
     CONSTRAINT fk_compra_detalle_presentacion
         FOREIGN KEY (presentacion_id)
         REFERENCES presentaciones(id)
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT,
+
+    CONSTRAINT chk_compra_detalle_cantidad
+        CHECK (cantidad > 0),
+
+    CONSTRAINT chk_compra_detalle_factor
+        CHECK (factor_conversion > 0),
+
+    CONSTRAINT chk_compra_detalle_costo
+        CHECK (costo_unitario >= 0),
+
+    CONSTRAINT chk_compra_detalle_descuento
+        CHECK (descuento >= 0),
+
+    CONSTRAINT chk_compra_detalle_impuesto_porcentaje
+        CHECK (
+            porcentaje_impuesto >= 0
+            AND porcentaje_impuesto <= 100
+        ),
+
+    CONSTRAINT chk_compra_detalle_impuesto
+        CHECK (importe_impuesto >= 0),
+
+    CONSTRAINT chk_compra_detalle_subtotal
+        CHECK (subtotal >= 0),
+
+    CONSTRAINT chk_compra_detalle_total
+        CHECK (total >= 0),
+
+    CONSTRAINT chk_compra_detalle_descuento_subtotal
+        CHECK (descuento <= subtotal),
+
+    CONSTRAINT chk_compra_detalle_total_calculo
+        CHECK (
+            total = subtotal - descuento + importe_impuesto
+        ),
+
+    CONSTRAINT chk_compra_detalle_caducidad
+        CHECK (
+            fecha_caducidad IS NULL
+            OR lote IS NOT NULL
+        )
 
 ) ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_unicode_ci;
 
 
--- ============================================================
--- ÍNDICES
--- ============================================================
-
-CREATE INDEX idx_compra_detalle_compra
-ON compras_detalle(compra_id);
+/*
+ * ============================================================
+ * ÍNDICES
+ * ============================================================
+ */
 
 CREATE INDEX idx_compra_detalle_producto
 ON compras_detalle(producto_id);
